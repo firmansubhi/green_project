@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
 	vcode: String,
 	city: String,
 	token: String,
+	verified: Boolean,
 });
 
 userSchema.virtual("transactions", {

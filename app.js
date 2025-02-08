@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const cors = require("cors");
+const fileUpload = require("express-fileupload");
 require("dotenv").config();
 
 // Route imports
@@ -9,13 +11,16 @@ const userRoutes = require("./routes/user");
 const productRoutes = require("./routes/product");
 const transactionRoutes = require("./routes/transaction");
 const paymentRoutes = require("./routes/payment");
+const newsRoutes = require("./routes/news");
 
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+app.use(fileUpload());
 
 // Routes
 app.use("/auth", authRoutes);
@@ -23,6 +28,7 @@ app.use("/users", userRoutes);
 app.use("/product", productRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/news", newsRoutes);
 
 // Database connection
 mongoose.connect("mongodb://localhost:27017/" + process.env.DB_NAME, {});

@@ -14,8 +14,9 @@ const transporter = nodemailer.createTransport({
 		pass: process.env.EMAIL_PASS,
 	},
 });
-
+//const delay = (time) => new Promise((res) => setTimeout(res, time));
 exports.login = async (req, res) => {
+	//await delay(3000);
 	const { username, password } = req.body;
 
 	if (!validateFields({ username, password }, res)) return;
@@ -26,6 +27,14 @@ exports.login = async (req, res) => {
 			return res.status(401).json({
 				success: false,
 				message: "Invalid username or password.",
+			});
+		}
+
+		if (!user.verified) {
+			return res.status(401).json({
+				success: false,
+				message: "unverified",
+				email: user.email,
 			});
 		}
 
@@ -100,6 +109,7 @@ exports.joinMember = async (req, res) => {
 			qrCode: username,
 			vcode: "",
 			city,
+			verified: false,
 		});
 
 		await newUser.save();
@@ -120,6 +130,7 @@ exports.verifyCode = async (req, res) => {
 		const row = await User.findOne({ email: email });
 
 		if (code === row.vcode) {
+			await User.updateMany({ email: email }, { verified: true });
 			res.status(200).json({
 				success: true,
 				message: "Verification successful",
@@ -157,13 +168,14 @@ exports.sendVerification = async (req, res) => {
 	transporter.sendMail(mailOptions, (error, info) => {
 		if (error) {
 			console.error("Error sending email:", error); // Log the error
-			return res
-				.status(500)
-				.json({ error: "An error occurred while sending the email." });
+			return res.status(500).json({
+				success: false,
+				message: "An error occurred while sending the email." + info,
+			});
 		}
 		res.status(200).json({
+			success: true,
 			message: "Verification code sent successfully!",
-			code: VerificationCode,
 		});
 	});
 };
