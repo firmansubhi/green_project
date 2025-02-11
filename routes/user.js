@@ -6,7 +6,9 @@ const { tokenCheck } = require("../middlewares/authMiddleware");
 
 // Define routes
 router.get("/all", tokenCheck(["administrator"]), userController.all);
+router.get("/showall", tokenCheck(["administrator"]), userController.showall);
 router.get("/:id", tokenCheck(["administrator"]), userController.single);
+router.get("/listing", tokenCheck(["administrator"]), userController.listing);
 router.post("/add", tokenCheck(["administrator"]), userController.add);
 router.post("/edit", tokenCheck(["administrator"]), userController.edit);
 router.delete("/:id", tokenCheck(["administrator"]), userController.delete);

@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Listing = require("../models/Listing");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -59,11 +60,103 @@ exports.all = async (req, res) => {
 	}
 };
 
+exports.listing = async (req, res) => {
+	try {
+		res.status(500).json({ success: true, message: "ada" });
+		return;
+
+		let headline = req.query.headline;
+		let pageNumber = req.query.page;
+
+		if (pageNumber === undefined) {
+			pageNumber = 1;
+		}
+
+		let query = {};
+		if (headline) {
+			query.headline = { $regex: new RegExp(headline), $options: "i" };
+		}
+
+		const rs = await Listing.paginate(query, {
+			page: pageNumber,
+			limit: 20,
+		});
+		const rows = rs.docs;
+		let listings = [];
+
+		for (var i = 0; i < rows.length; i++) {
+			listings[i] = {
+				id: rows[i]._id,
+				tipe: rows[i].propertytype,
+				headline: rows[i].headline,
+				price: rows[i].price,
+			};
+		}
+
+		const r = {
+			rows: listings,
+			totalDocs: rs.totalDocs,
+			limit: rs.limit,
+			totalPages: rs.totalPages,
+			page: rs.age,
+			pagingCounter: rs.pagingCounter,
+			hasPrevPage: rs.hasPrevPage,
+			hasNextPage: rs.hasNextPage,
+			prevPage: rs.prevPage,
+			nextPage: rs.nextPage,
+		};
+
+		res.status(200).json({ success: true, data: r });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+exports.showall = async (req, res) => {
+	try {
+		let email = req.query.email;
+		let role = req.query.role;
+
+		let query = {};
+		if (email) {
+			query.email = { $regex: new RegExp(email), $options: "i" };
+		}
+
+		if (role) {
+			query.role = role;
+		}
+
+		const rows = await User.find(query);
+		let members = [];
+
+		for (var i = 0; i < rows.length; i++) {
+			members[i] = {
+				userid: rows[i]._id.toString(),
+				name: rows[i].firstname + " " + rows[i].lastname,
+				username: rows[i].username,
+				email: rows[i].email,
+				city: rows[i].city,
+				role: rows[i].role,
+			};
+		}
+
+		const r = {
+			rows: members,
+		};
+
+		res.status(200).json({ success: true, data: r });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
 exports.single = async (req, res) => {
 	const id = req.params.id;
 
 	try {
 		const row = await User.findById(id);
+		row.token = "";
+		row.password = "";
 		res.status(200).json({
 			success: true,
 			data: row,
@@ -91,21 +184,19 @@ exports.add = async (req, res) => {
 	//check if email address already registered
 	const doesUserExit = await User.exists({ email: email });
 	if (doesUserExit) {
-		res.status(201).json({
+		return res.status(201).json({
 			success: false,
 			message: "Email address already registered",
 		});
-		return;
 	}
 
 	//check if username already registered
 	const doesUsernameExit = await User.exists({ username: username });
 	if (doesUsernameExit) {
-		res.status(201).json({
+		return res.status(201).json({
 			success: false,
 			message: "Username already registered",
 		});
-		return;
 	}
 
 	// Hash the password before saving (use bcrypt or similar)
@@ -124,23 +215,29 @@ exports.add = async (req, res) => {
 
 	try {
 		await newUser.save();
-		res.status(200).json({
+		return res.status(200).json({
 			success: true,
 			message: "Member inserted successfully.",
 		});
 	} catch (error) {
-		res.status(500).json({
+		return res.status(500).json({
 			success: true,
-			error: "An error occurred while saving your request.",
+			message: "An error occurred while saving your request.",
 		});
 	}
 };
 
 exports.edit = async (req, res) => {
-	const { _id, firstname, lastname, username, email, city, role } = req.body;
+	const { _id, firstname, lastname, username, email, city, role, password } =
+		req.body;
 
-	let currentID = mongoose.Types.ObjectId.createFromHexString(_id);
-
+	let currentID = "";
+	try {
+		currentID = mongoose.Types.ObjectId.createFromHexString(_id);
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+		return;
+	}
 	// Validate input
 	if (!username || !email) {
 		return res.status(404).json({
@@ -175,7 +272,32 @@ exports.edit = async (req, res) => {
 		return;
 	}
 
-	await User.findByIdAndUpdate(_id, req.body, {
+	let userdata = {
+		firstname,
+		lastname,
+		username,
+		email,
+		city,
+		role,
+		qrCode: username,
+	};
+
+	if (password != "") {
+		const hashedPassword = await bcrypt.hash(password, 10);
+
+		userdata = {
+			firstname,
+			lastname,
+			username,
+			email,
+			city,
+			role,
+			qrCode: username,
+			password: hashedPassword,
+		};
+	}
+
+	await User.findByIdAndUpdate(_id, userdata, {
 		useFindAndModify: false,
 	})
 		.then((data) => {

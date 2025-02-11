@@ -12,6 +12,7 @@ const productRoutes = require("./routes/product");
 const transactionRoutes = require("./routes/transaction");
 const paymentRoutes = require("./routes/payment");
 const newsRoutes = require("./routes/news");
+const listingRoutes = require("./routes/listing");
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/product", productRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/news", newsRoutes);
+app.use("/listing", listingRoutes);
 
 // Database connection
 mongoose.connect("mongodb://localhost:27017/" + process.env.DB_NAME, {});
