@@ -11,6 +11,12 @@ router.get(
 );
 
 router.get(
+	"/my-qrcode",
+	tokenCheck(["seller", "receiver", "buyer", "administrator"]),
+	transactionController.myQRCode
+);
+
+router.get(
 	"/all",
 	tokenCheck(["seller", "receiver", "buyer", "administrator"]),
 	transactionController.all

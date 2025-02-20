@@ -29,7 +29,7 @@ app.use("/users", userRoutes);
 app.use("/product", productRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/payments", paymentRoutes);
-app.use("/news", newsRoutes);
+app.use("/newsadmin", newsRoutes);
 app.use("/listing", listingRoutes);
 
 // Database connection

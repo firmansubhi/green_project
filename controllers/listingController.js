@@ -17,16 +17,21 @@ exports.listing = async (req, res) => {
 			query.headline = { $regex: new RegExp(headline), $options: "i" };
 		}
 
+		//{_id:{ $lt:46100}}
+		query._id = { $lt: 46100 };
+
 		const rs = await Listing.paginate(query, {
 			page: pageNumber,
-			limit: 20,
+			limit: 30,
+			sort: { _id: 1 },
 		});
 		const rows = rs.docs;
 		let listings = [];
 
 		for (var i = 0; i < rows.length; i++) {
 			listings[i] = {
-				id: rows[i]._id,
+				productid: rows[i]._id,
+				sid: pageNumber + "-" + rows[i]._id.toString(),
 				tipe: rows[i].propertytype,
 				headline: rows[i].headline,
 				price: rows[i].price,
@@ -50,4 +55,29 @@ exports.listing = async (req, res) => {
 	} catch (error) {
 		res.status(500).json({ success: false, message: error.message });
 	}
+};
+
+exports.delete = async (req, res) => {
+	const id = req.params.id;
+
+	await Listing.findByIdAndDelete(id)
+		.then((data) => {
+			if (!data) {
+				res.status(404).json({
+					success: false,
+					message: "Product not found",
+				});
+			} else {
+				res.status(200).json({
+					success: true,
+					message: "Product deleted successfully!",
+				});
+			}
+		})
+		.catch((error) => {
+			res.status(500).json({
+				success: false,
+				message: error.message,
+			});
+		});
 };

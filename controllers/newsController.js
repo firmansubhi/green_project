@@ -1,12 +1,15 @@
 const mongoose = require("mongoose");
 const moment = require("moment");
 const News = require("../models/News");
+const NewsCategories = require("../models/NewsCategories");
 const User = require("../models/User");
 require("dotenv").config();
 const sharp = require("sharp");
-const fs = require("fs");
+const fs = require("fs/promises");
 
 exports.all = async (req, res) => {
+	//console.log(crypto.randomBytes(32).toString("hex"));
+
 	try {
 		//get query string from frontend
 		let title = req.query.title;
@@ -40,16 +43,24 @@ exports.all = async (req, res) => {
 
 		//define empty data
 		let data = [];
-
+		let categoryName = "";
 		for (var i = 0; i < rows.length; i++) {
+			if (rows[i].category) {
+				categoryName = rows[i].category.name;
+			} else {
+				categoryName = "";
+			}
+
 			//append database row to data
 			data[i] = {
 				id: rows[i]._id.toString(),
 				newsID: rows[i].newsID,
 				creator: rows[i].creator,
+				categoryName: categoryName,
 				title: rows[i].title,
 				intro: rows[i].intro,
-				content: rows[i].content,
+				imagePath: "https://tempdev2.roomie.id/" + rows[i].imagePath,
+				imageThumb: "https://tempdev2.roomie.id/" + rows[i].imageThumb,
 				publishDate: moment(rows[i].publishDate).format(
 					"ddd, D MMM YY HH:mm"
 				),
@@ -80,6 +91,71 @@ exports.all = async (req, res) => {
 	}
 };
 
+exports.viewg = async (req, res) => {
+	try {
+		const rows = await NewsCategories.find();
+		let data = [];
+
+		let rowsd;
+
+		for (var i = 0; i < rows.length; i++) {
+			data[i] = {
+				id: rows[i]._id,
+				name: rows[i].name,
+				detail: [],
+			};
+
+			rowsd = await News.find({
+				categoryId: rows[i]._id,
+			}).sort({ publishDate: -1 });
+
+			for (var j = 0; j < rowsd.length; j++) {
+				data[i].detail[j] = {
+					sid: rowsd[j]._id.toString(),
+					imageThumb:
+						"https://tempdev2.roomie.id/" + rowsd[j].imageThumb,
+					title: rowsd[j].title,
+					intro: rowsd[j].intro,
+					newsID: rowsd[j].newsID,
+				};
+			}
+		}
+
+		//sent data to the frontend
+		res.status(200).json({ success: true, data: data });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+exports.categories = async (req, res) => {
+	try {
+		const rows = await NewsCategories.find({});
+		let data = [];
+
+		data[0] = {
+			id: "-",
+			name: "Select Category",
+			price: 0,
+		};
+
+		for (var i = 0; i < rows.length; i++) {
+			data[i + 1] = {
+				id: rows[i]._id,
+				name: rows[i].name,
+			};
+		}
+
+		const r = {
+			rows: data,
+		};
+
+		res.status(200).json({ success: true, data: r });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
 exports.single = async (req, res) => {
 	//get ID from URL parameter
 	const id = req.params.id;
@@ -88,6 +164,12 @@ exports.single = async (req, res) => {
 		//get data from database
 		const row = await News.findById(id);
 
+		let imageThumb = "";
+
+		if (row.imageThumb) {
+			imageThumb = "https://tempdev2.roomie.id/" + row.imageThumb;
+		}
+
 		let data = {
 			_id: row._id,
 			newsID: row.newsID,
@@ -95,7 +177,12 @@ exports.single = async (req, res) => {
 			intro: row.intro,
 			content: row.content,
 			imagePath: row.imagePath,
-			publishDate: moment(row.publishDate).format("YYYY-MM-DD HH:MM"),
+			imageThumb: imageThumb,
+			category: row.category,
+			publishDate: moment(row.publishDate).format("YYYY-MM-DD HH:mm"),
+			publishDate2: moment(row.publishDate).format(
+				"YYYY-MM-DDTHH:mm:ssZ"
+			),
 			createdAt: moment(row.createdAt).format("yyyy-mm-dd hh:mm"),
 		};
 
@@ -114,7 +201,7 @@ exports.single = async (req, res) => {
 
 exports.add = async (req, res) => {
 	//get data from frontend
-	const { title, intro, content, publishDate } = req.body;
+	const { title, intro, content, publishDate, category } = req.body;
 
 	//get request data from tokenCheck function
 	const userid = req.userid;
@@ -134,10 +221,15 @@ exports.add = async (req, res) => {
 		//create generated news ID
 		const newsID = await generateNewsID(title);
 
+		const selectedCategory = await NewsCategories.findById(category);
+
 		//set saved data
 		const newNews = new News({
 			newsID: newsID,
 			creator: creator,
+			category: selectedCategory,
+			categoryId: selectedCategory._id,
+			categoryName: selectedCategory.name,
 			title: title,
 			intro: intro,
 			content: content,
@@ -160,34 +252,46 @@ exports.add = async (req, res) => {
 
 				let imagePath = "news_image/" + newsID + ext;
 				let newImagePath = "news_image/" + newsID + ".webp";
+				let newImageThumb = "news_image/" + newsID + "-thumb.webp";
 
 				//save uploaded image
 				await image.mv(process.env.BASE_IMAGE_PATH + "/" + imagePath);
 
 				//resize image
 				sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-					.resize({ width: 750, height: 500 })
+					.resize({ width: 1024, height: 576 })
 					.toFile(
 						process.env.BASE_IMAGE_PATH + "/" + newImagePath,
 						(err, info) => {
-							fs.unlink(
-								process.env.BASE_IMAGE_PATH + "/" + imagePath,
-								(err) => {
-									if (err) {
-										console.error(
-											"An error occurred:",
-											err
+							sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
+								.resize({ width: 600, height: 400 })
+								.toFile(
+									process.env.BASE_IMAGE_PATH +
+										"/" +
+										newImageThumb,
+									(err, info) => {
+										fs.unlink(
+											process.env.BASE_IMAGE_PATH +
+												"/" +
+												imagePath,
+											(err) => {
+												if (err) {
+													console.error(
+														"An error occurred:",
+														err
+													);
+												}
+											}
 										);
 									}
-								}
-							);
+								);
 						}
 					);
 
 				//update imagePath in monogdb
 				await News.updateOne(
 					{ newsID: newsID },
-					{ imagePath: newImagePath }
+					{ imagePath: newImagePath, imageThumb: newImageThumb }
 				);
 			}
 
@@ -196,7 +300,6 @@ exports.add = async (req, res) => {
 				message: "news created",
 			});
 		} catch (error) {
-			console.log(error);
 			res.status(500).json({
 				success: true,
 				error: "An error occurred while saving your request.",
@@ -213,11 +316,8 @@ exports.add = async (req, res) => {
 exports.edit = async (req, res) => {
 	//get data from frontend
 
-	const { _id, newsID, title, intro, content, publishDate } = req.body;
-	//let isImage = false;
-	//if (!req.files) {
-	//	isImage = true;
-	//}
+	const { _id, newsID, title, intro, content, publishDate, category } =
+		req.body;
 
 	//create object ID for mongoDB based on given ID (_id)
 	let currentID = mongoose.Types.ObjectId.createFromHexString(_id);
@@ -230,6 +330,8 @@ exports.edit = async (req, res) => {
 		});
 	}
 
+	const selectedCategory = await NewsCategories.findById(category);
+
 	try {
 		try {
 			//update data
@@ -241,45 +343,65 @@ exports.edit = async (req, res) => {
 					intro: intro,
 					content: content,
 					publishDate: publishDate,
+					category: selectedCategory,
+					categoryId: selectedCategory._id,
+					categoryName: selectedCategory.name,
 					updatedAt: new Date(),
 				}
 			);
 
 			if (req.files) {
-				let image = req.files.image;
 				let ext = ".jpg";
+				let picName = newsID + randomString(6);
+				let imagePath = "news_image/" + picName + ext;
+				let newImagePath = "news_image/" + picName + ".webp";
+				let newImageThumb = "news_image/" + picName + "-thumb.webp";
+
+				const old = await News.findOne({ _id: currentID });
+				fs.unlink(process.env.BASE_IMAGE_PATH + "/" + old.imagePath);
+				fs.unlink(process.env.BASE_IMAGE_PATH + "/" + old.imageThumb);
+
+				let image = req.files.image;
 
 				if (image.mimetype == "image/png") {
 					ext = ".png";
 				}
 
-				let imagePath = "news_image/" + newsID + ext;
-				let newImagePath = "news_image/" + newsID + ".webp";
-
 				await image.mv(process.env.BASE_IMAGE_PATH + "/" + imagePath);
 
 				sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-					.resize({ width: 750, height: 500 })
+					.resize({ width: 1024, height: 576 })
 					.toFile(
 						process.env.BASE_IMAGE_PATH + "/" + newImagePath,
 						(err, info) => {
-							fs.unlink(
-								process.env.BASE_IMAGE_PATH + "/" + imagePath,
-								(err) => {
-									if (err) {
-										console.error(
-											"An error occurred:",
-											err
+							sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
+								.resize({ width: 600, height: 400 })
+								.toFile(
+									process.env.BASE_IMAGE_PATH +
+										"/" +
+										newImageThumb,
+									(err, info) => {
+										fs.unlink(
+											process.env.BASE_IMAGE_PATH +
+												"/" +
+												imagePath,
+											(err) => {
+												if (err) {
+													console.error(
+														"An error occurred:",
+														err
+													);
+												}
+											}
 										);
 									}
-								}
-							);
+								);
 						}
 					);
 
 				await News.updateOne(
 					{ _id: currentID },
-					{ imagePath: newImagePath }
+					{ imagePath: newImagePath, imageThumb: newImageThumb }
 				);
 			}
 
@@ -289,8 +411,8 @@ exports.edit = async (req, res) => {
 			});
 		} catch (error) {
 			res.status(500).json({
-				success: error,
-				error: "An error occurred while saving your request.",
+				success: false,
+				message: error.message,
 			});
 		}
 	} catch (error) {
@@ -300,6 +422,21 @@ exports.edit = async (req, res) => {
 		});
 	}
 };
+
+function randomString(length) {
+	let result = "";
+	const characters =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const charactersLength = characters.length;
+	let counter = 0;
+	while (counter < length) {
+		result += characters.charAt(
+			Math.floor(Math.random() * charactersLength)
+		);
+		counter += 1;
+	}
+	return result;
+}
 
 exports.delete = async (req, res) => {
 	//get ID from URL parameter
@@ -399,9 +536,10 @@ exports.view = async (req, res) => {
 			title: row.title,
 			intro: row.intro,
 			content: row.content,
-			imagePath: row.imagePath,
+			imagePath: "https://tempdev2.roomie.id/" + row.imagePath,
 			creator: row.creator.firstname,
 			publishDate: moment(row.publishDate).format("ddd, D MMM YY HH:mm"),
+			categoryName: row.categoryName,
 		};
 
 		//sent data to the frontend

@@ -58,6 +58,20 @@
 							/>
 						</div>
 
+						<div class="mb-3">
+							<label for="category" class="form-label"
+								>Category</label
+							>
+							<select
+								class="form-select"
+								id="category"
+								name="category"
+							>
+								<option value="investment">Investment</option>
+								<option value="communities">Communities</option>
+							</select>
+						</div>
+
 						<div style="display: none" id="newsIDBox" class="mb-3">
 							<label for="newsID" class="form-label"
 								>News ID</label
@@ -135,7 +149,7 @@
 					$("#newsIDBox").show(0);
 					$.ajax({
 						dataType: "json",
-						url: domain + "/news/" + id,
+						url: domain + "/newsadmin/" + id,
 						beforeSend: function (xhr) {
 							xhr.setRequestHeader(
 								"Authorization",
@@ -148,9 +162,8 @@
 							$("#title").val(res.data.title);
 							$("#intro").val(res.data.intro);
 							$("#content").val(res.data.content);
-
+							$("#category").val(res.data.category._id);
 							$("#publishDate").val(res.data.publishDate);
-
 							$("#imagePath").attr("src", res.data.imagePath);
 						},
 						error: function (xhr, status, error) {
@@ -160,9 +173,9 @@
 				}
 
 				$("#dataForm").submit(function (event) {
-					let uri = domain + "/news/add";
+					let uri = domain + "/newsadmin/add";
 					if (source == "edit") {
-						uri = domain + "/news/edit";
+						uri = domain + "/newsadmin/edit";
 					}
 					event.preventDefault();
 					$.ajax({

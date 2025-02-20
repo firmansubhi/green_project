@@ -10,6 +10,7 @@ router.get(
 	tokenCheck(["administrator"]),
 	listingController.listing
 );
+router.delete("/:id", tokenCheck(["administrator"]), listingController.delete);
 
 // Export the router
 module.exports = router;

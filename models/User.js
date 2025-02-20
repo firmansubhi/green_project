@@ -27,5 +27,4 @@ userSchema.virtual("transactions", {
 });
 
 userSchema.plugin(mongoosePaginate);
-
 module.exports = mongoose.model("User", userSchema);

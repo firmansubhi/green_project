@@ -198,6 +198,7 @@
 								$("#totalAmount").html(res.data.totalAmount);
 
 								s = ``;
+
 								rows.forEach((r) => {
 									s +=
 										`<tr>
@@ -211,19 +212,13 @@
 										r.createdAt +
 										`</td>
 											<td>` +
-										r.seller.firstname +
-										` ` +
-										r.seller.lastname +
+										r.sellerName +
 										`</td>
 											<td>` +
-										r.receiver.firstname +
-										` ` +
-										r.receiver.lastname +
+										r.receiverName +
 										`</td>
 										<td>` +
-										r.buyer.firstname +
-										` ` +
-										r.buyer.lastname +
+										r.buyerName +
 										`</td>
 											<td>` +
 										r.product.name +

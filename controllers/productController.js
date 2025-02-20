@@ -13,8 +13,14 @@ exports.all = async (req, res) => {
 		const rows = await Product.find(query);
 		let data = [];
 
+		data[0] = {
+			id: "-",
+			name: "Select Product",
+			price: 0,
+		};
+
 		for (var i = 0; i < rows.length; i++) {
-			data[i] = {
+			data[i + 1] = {
 				id: rows[i]._id.toString(),
 				name: rows[i].name,
 				price: rows[i].price,

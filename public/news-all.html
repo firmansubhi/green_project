@@ -152,7 +152,7 @@
 
 					const response = await fetch(
 						domain +
-							`/news/all?page=` +
+							`/newsadmin/all?page=` +
 							pageNumber +
 							`&title=` +
 							searchTitle +
@@ -241,7 +241,7 @@
 			function deleteData(id) {
 				$.ajax({
 					type: "DELETE",
-					url: domain + "/news/" + id,
+					url: domain + "/newsadmin/" + id,
 					beforeSend: function (xhr) {
 						xhr.setRequestHeader(
 							"Authorization",

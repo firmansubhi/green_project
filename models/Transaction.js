@@ -37,6 +37,7 @@ const transactionSchema = new mongoose.Schema({
 	finalizedAt: Date,
 	approvedAt: Date,
 	paidAt: Date,
+	finished: { type: Boolean, default: false },
 });
 
 transactionSchema.plugin(mongoosePaginate);

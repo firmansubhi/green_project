@@ -3,9 +3,34 @@ const moment = require("moment");
 const Transaction = require("../models/Transaction");
 const User = require("../models/User");
 const Product = require("../models/Product");
+const QRCode = require("qrcode");
 
 exports.scanQRCode = async (req, res) => {
 	res.status(200).json({ status: "success", memberId: req.userid });
+};
+
+exports.myQRCode = async (req, res) => {
+	let username = req.query.username;
+
+	try {
+		const user = await User.findOne({ username });
+		if (!user) {
+			return res.status(401).json({
+				success: false,
+				message: "Invalid username.",
+			});
+		}
+
+		const uid = user._id.toString();
+		const qrCodeImage = await QRCode.toDataURL(uid, { width: 800 });
+
+		return res.status(200).json({
+			success: true,
+			data: qrCodeImage,
+		});
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
 };
 
 exports.all = async (req, res) => {
@@ -41,16 +66,44 @@ exports.all = async (req, res) => {
 		const rs = await Transaction.paginate(query, {
 			page: pageNumber,
 			limit: 10,
+			sort: { finished: 1, createdAt: 1 },
 		});
 		const rows = rs.docs;
 
 		//define empty data
 		let data = [];
 
+		let sellerName = "";
+		let receiverName = "";
+		let buyerName = "";
+		let productName = "";
+
 		for (var i = 0; i < rows.length; i++) {
+			if (typeof rows[i].seller.firstname !== "undefined") {
+				sellerName =
+					rows[i].seller.firstname + " " + rows[i].seller.lastname;
+			}
+
+			if (typeof rows[i].receiver.firstname !== "undefined") {
+				receiverName =
+					rows[i].receiver.firstname +
+					" " +
+					rows[i].receiver.lastname;
+			}
+
+			if (typeof rows[i].buyer !== "undefined") {
+				buyerName =
+					rows[i].buyer.firstname + " " + rows[i].buyer.lastname;
+			}
+
+			if (typeof rows[i].seller.firstname !== "undefined") {
+				productName = rows[i].product.name;
+			}
+
 			//append database row to data
 			data[i] = {
 				id: rows[i]._id.toString(),
+				sid: pageNumber + "-" + rows[i]._id.toString(),
 				transID: rows[i].transID,
 				seller: rows[i].seller,
 				receiver: rows[i].receiver,
@@ -62,6 +115,11 @@ exports.all = async (req, res) => {
 				createdAt: moment(rows[i].createdAt).format(
 					"ddd, D MMM YY HH:mm"
 				),
+
+				sellerName: sellerName,
+				receiverName: receiverName,
+				buyerName: buyerName,
+				productName: productName,
 			};
 		}
 
@@ -114,7 +172,6 @@ exports.single = async (req, res) => {
 	try {
 		//get data from database
 		const row = await Transaction.findById(id);
-
 		//sent data to the frontend
 		res.status(200).json({
 			success: true,
@@ -132,7 +189,6 @@ exports.add = async (req, res) => {
 	//get data from frontend
 	const { sellerId, productId, weight } = req.body;
 
-	console.log(req.username);
 	//get request data from tokenCheck function
 	const receiverUsername = req.username;
 
@@ -190,6 +246,7 @@ exports.add = async (req, res) => {
 			status: "pending",
 			amount: totalAmount,
 			createdAt: new Date(),
+			finished: false,
 		});
 
 		try {
@@ -200,7 +257,6 @@ exports.add = async (req, res) => {
 				message: "Product received",
 			});
 		} catch (error) {
-			console.log(error);
 			res.status(500).json({
 				success: true,
 				error: "An error occurred while saving your request.",
@@ -219,7 +275,13 @@ exports.edit = async (req, res) => {
 	const { _id, sellerId, productId, weight } = req.body;
 
 	//create object ID for mongoDB based on given ID (_id)
-	let currentID = mongoose.Types.ObjectId.createFromHexString(_id);
+	let currentID = "";
+	try {
+		currentID = mongoose.Types.ObjectId.createFromHexString(_id);
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+		return;
+	}
 
 	// Validate input
 	if (!sellerId || !productId || !weight) {
@@ -317,6 +379,7 @@ exports.finalizeGoods = async (req, res) => {
 			status: "finalized",
 			buyer: buyer,
 			buyerUsername: buyer.username,
+			finished: true,
 		},
 		{
 			useFindAndModify: false,

@@ -1,8 +1,11 @@
 const User = require("../models/User");
+const UserToken = require("../models/UserToken");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 require("dotenv").config();
+const { encrypt } = require("../encryption.js");
+const moment = require("moment");
 
 const transporter = nodemailer.createTransport({
 	service: "Gmail",
@@ -38,14 +41,25 @@ exports.login = async (req, res) => {
 			});
 		}
 
-		const tokenString = crypto.randomBytes(64).toString("hex");
+		const tokenString = crypto.randomBytes(32).toString("hex");
+		const tokenSend = encrypt(tokenString);
+		let nextDate = moment().add(1, "days");
+
+		const newToken = new UserToken({
+			userId: user._id.toString(),
+			token: tokenString,
+			expiredDate: nextDate,
+		});
+		await newToken.save();
+
 		user.token = tokenString;
 		await user.save();
 
 		res.status(200).json({
 			success: true,
 			message: "Login successful!",
-			token: tokenString,
+			token: tokenSend,
+			role: user.role,
 		});
 	} catch (error) {
 		res.status(500).json({ success: false, message: error.message });
