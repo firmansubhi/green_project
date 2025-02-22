@@ -13,6 +13,10 @@ exports.myQRCode = async (req, res) => {
 	let username = req.query.username;
 
 	try {
+		if (username === undefined) {
+			username = req.username;
+		}
+
 		const user = await User.findOne({ username });
 		if (!user) {
 			return res.status(401).json({
@@ -156,6 +160,7 @@ exports.all = async (req, res) => {
 			nextPage: rs.nextPage,
 			totalAmount: totalAmount,
 			totalWeight: totalWeight,
+			countDoc: i,
 		};
 
 		//sent data to the frontend

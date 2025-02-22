@@ -52,6 +52,7 @@ exports.all = async (req, res) => {
 			hasNextPage: rs.hasNextPage,
 			prevPage: rs.prevPage,
 			nextPage: rs.nextPage,
+			countDoc: i,
 		};
 
 		res.status(200).json({ success: true, data: r });
@@ -282,19 +283,25 @@ exports.edit = async (req, res) => {
 		qrCode: username,
 	};
 
-	if (password != "") {
-		const hashedPassword = await bcrypt.hash(password, 10);
+	if (typeof password !== "undefined") {
+		if (password) {
+			if (password != "") {
+				console.log("dusta", password);
 
-		userdata = {
-			firstname,
-			lastname,
-			username,
-			email,
-			city,
-			role,
-			qrCode: username,
-			password: hashedPassword,
-		};
+				let hashedPassword = await bcrypt.hash(password, 10);
+
+				userdata = {
+					firstname,
+					lastname,
+					username,
+					email,
+					city,
+					role,
+					qrCode: username,
+					password: hashedPassword,
+				};
+			}
+		}
 	}
 
 	await User.findByIdAndUpdate(_id, userdata, {

@@ -67,6 +67,7 @@ exports.all = async (req, res) => {
 				createdAt: moment(rows[i].createdAt).format(
 					"ddd, D MMM YY HH:mm"
 				),
+				publishDate2: moment(rows[i].publishDate).format(),
 			};
 		}
 
@@ -82,6 +83,7 @@ exports.all = async (req, res) => {
 			hasNextPage: rs.hasNextPage,
 			prevPage: rs.prevPage,
 			nextPage: rs.nextPage,
+			countDoc: i,
 		};
 
 		//sent data to the frontend
@@ -184,6 +186,8 @@ exports.single = async (req, res) => {
 				"YYYY-MM-DDTHH:mm:ssZ"
 			),
 			createdAt: moment(row.createdAt).format("yyyy-mm-dd hh:mm"),
+			publishDate2: moment(row.publishDate).format("YYYY-MM-DD HH:mm:ss"),
+			categoryId: row.categoryId,
 		};
 
 		//sent data to the frontend
@@ -358,8 +362,21 @@ exports.edit = async (req, res) => {
 				let newImageThumb = "news_image/" + picName + "-thumb.webp";
 
 				const old = await News.findOne({ _id: currentID });
-				fs.unlink(process.env.BASE_IMAGE_PATH + "/" + old.imagePath);
-				fs.unlink(process.env.BASE_IMAGE_PATH + "/" + old.imageThumb);
+
+				try {
+					if (typeof old.imagePath !== "undefined") {
+						fs.unlink(
+							process.env.BASE_IMAGE_PATH + "/" + old.imagePath
+						);
+					}
+					if (typeof old.imageThumb !== "undefined") {
+						fs.unlink(
+							process.env.BASE_IMAGE_PATH + "/" + old.imageThumb
+						);
+					}
+				} catch (error) {
+					console.log(error.message);
+				}
 
 				let image = req.files.image;
 
@@ -369,35 +386,48 @@ exports.edit = async (req, res) => {
 
 				await image.mv(process.env.BASE_IMAGE_PATH + "/" + imagePath);
 
-				sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-					.resize({ width: 1024, height: 576 })
-					.toFile(
-						process.env.BASE_IMAGE_PATH + "/" + newImagePath,
-						(err, info) => {
-							sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-								.resize({ width: 600, height: 400 })
-								.toFile(
+				try {
+					sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
+						.resize({ width: 1024, height: 576 })
+						.toFile(
+							process.env.BASE_IMAGE_PATH + "/" + newImagePath,
+							(err, info) => {
+								sharp(
 									process.env.BASE_IMAGE_PATH +
 										"/" +
-										newImageThumb,
-									(err, info) => {
-										fs.unlink(
-											process.env.BASE_IMAGE_PATH +
-												"/" +
-												imagePath,
-											(err) => {
-												if (err) {
-													console.error(
-														"An error occurred:",
-														err
-													);
-												}
+										imagePath
+								)
+									.resize({ width: 600, height: 400 })
+									.toFile(
+										process.env.BASE_IMAGE_PATH +
+											"/" +
+											newImageThumb,
+										(err, info) => {
+											try {
+												fs.unlink(
+													process.env
+														.BASE_IMAGE_PATH +
+														"/" +
+														imagePath,
+													(err) => {
+														if (err) {
+															console.error(
+																"An error occurred:",
+																err
+															);
+														}
+													}
+												);
+											} catch (error) {
+												console.log(error.message);
 											}
-										);
-									}
-								);
-						}
-					);
+										}
+									);
+							}
+						);
+				} catch (error) {
+					console.log(error.message);
+				}
 
 				await News.updateOne(
 					{ _id: currentID },
