@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Listing = require("../models/Listing");
+const Transaction = require("../models/Transaction");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -351,4 +352,56 @@ exports.delete = async (req, res) => {
 				message: error.message,
 			});
 		});
+};
+
+exports.myProfile = async (req, res) => {
+	const id = req.userid;
+
+	try {
+		const row = await User.findById(id);
+		row.token = "";
+		row.password = "";
+		res.status(200).json({
+			success: true,
+			data: row,
+		});
+	} catch (error) {
+		res.status(404).json({
+			success: false,
+			message: error.message,
+		});
+	}
+};
+
+exports.myPoin = async (req, res) => {
+	const userName = req.username;
+	let amount = 0;
+
+	try {
+		let query = { sellerUsername: userName };
+
+		const summary = await Transaction.aggregate([
+			{ $match: query },
+			{
+				$group: {
+					_id: null,
+					amount: { $sum: "$amount" },
+				},
+			},
+		]);
+
+		if (summary.length > 0) {
+			amount = summary[0].amount;
+		}
+
+		res.status(200).json({
+			success: true,
+			data: amount,
+		});
+	} catch (error) {
+		res.status(404).json({
+			success: false,
+			message: error.message,
+		});
+	}
 };

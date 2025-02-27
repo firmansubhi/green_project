@@ -11,8 +11,12 @@ router.get(
 	tokenCheck(["administrator"]),
 	newsController.categories
 );
+
+router.get("/banner", newsController.banner);
 router.get("/:id", tokenCheck(["administrator"]), newsController.single);
 router.get("/group/all", newsController.viewg);
+router.get("/category/:category", newsController.category);
+
 router.get("/view/:id", newsController.view);
 router.post("/add", tokenCheck(["administrator"]), newsController.add);
 router.post("/edit", tokenCheck(["administrator"]), newsController.edit);

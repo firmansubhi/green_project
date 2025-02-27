@@ -7,6 +7,16 @@ const { tokenCheck } = require("../middlewares/authMiddleware");
 // Define routes
 router.get("/all", tokenCheck(["administrator"]), userController.all);
 router.get("/showall", tokenCheck(["administrator"]), userController.showall);
+router.get(
+	"/myprofile",
+	tokenCheck(["seller", "receiver", "buyer", "administrator"]),
+	userController.myProfile
+);
+router.get(
+	"/mypoin",
+	tokenCheck(["seller", "receiver", "buyer", "administrator"]),
+	userController.myPoin
+);
 router.get("/:id", tokenCheck(["administrator"]), userController.single);
 router.get("/listing", tokenCheck(["administrator"]), userController.listing);
 router.post("/add", tokenCheck(["administrator"]), userController.add);

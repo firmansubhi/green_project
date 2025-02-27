@@ -25,7 +25,10 @@ exports.login = async (req, res) => {
 	if (!validateFields({ username, password }, res)) return;
 
 	try {
-		const user = await User.findOne({ username });
+		let user = await User.findOne({ username });
+		if (!user) {
+			user = await User.findOne({ email: username });
+		}
 		if (!user || !(await bcrypt.compare(password, user.password))) {
 			return res.status(401).json({
 				success: false,

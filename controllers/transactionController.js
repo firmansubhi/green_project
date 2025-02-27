@@ -107,7 +107,12 @@ exports.all = async (req, res) => {
 			//append database row to data
 			data[i] = {
 				id: rows[i]._id.toString(),
-				sid: pageNumber + "-" + rows[i]._id.toString(),
+				sid:
+					pageNumber +
+					"-" +
+					rows[i]._id.toString() +
+					"-" +
+					moment().unix().toString(),
 				transID: rows[i].transID,
 				seller: rows[i].seller,
 				receiver: rows[i].receiver,

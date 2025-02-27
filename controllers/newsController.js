@@ -119,7 +119,52 @@ exports.viewg = async (req, res) => {
 					title: rowsd[j].title,
 					intro: rowsd[j].intro,
 					newsID: rowsd[j].newsID,
+					publishDate: moment(rowsd[j].publishDate).format(
+						"ddd, D MMM YY"
+					),
 				};
+			}
+		}
+
+		//sent data to the frontend
+		res.status(200).json({ success: true, data: data });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+exports.category = async (req, res) => {
+	try {
+		const category = req.params.category;
+
+		const rows = await News.find({ categoryId: category })
+			.sort({
+				publishDate: -1,
+			})
+			.limit(6);
+		let data = [];
+		let data2 = [];
+
+		let no = 0;
+		let y = 0;
+		let j = 0;
+		for (var i = 0; i < rows.length; i++) {
+			no++;
+
+			data2[j] = {
+				newsID: rows[i].newsID,
+				imageThumb: "https://tempdev2.roomie.id/" + rows[i].imageThumb,
+				title: rows[i].title,
+				publishDate: moment(rows[i].publishDate).format("ddd, D MMM"),
+			};
+
+			if (no % 2 == 0) {
+				data[y] = data2;
+				y++;
+				j = 0;
+				data2 = [];
+			} else {
+				j++;
 			}
 		}
 
@@ -263,12 +308,12 @@ exports.add = async (req, res) => {
 
 				//resize image
 				sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-					.resize({ width: 1024, height: 576 })
+					.resize({ width: 1024, height: 870 })
 					.toFile(
 						process.env.BASE_IMAGE_PATH + "/" + newImagePath,
 						(err, info) => {
 							sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-								.resize({ width: 600, height: 400 })
+								.resize({ width: 450, height: 408 })
 								.toFile(
 									process.env.BASE_IMAGE_PATH +
 										"/" +
@@ -388,7 +433,7 @@ exports.edit = async (req, res) => {
 
 				try {
 					sharp(process.env.BASE_IMAGE_PATH + "/" + imagePath)
-						.resize({ width: 1024, height: 576 })
+						.resize({ width: 1024, height: 870 })
 						.toFile(
 							process.env.BASE_IMAGE_PATH + "/" + newImagePath,
 							(err, info) => {
@@ -397,7 +442,7 @@ exports.edit = async (req, res) => {
 										"/" +
 										imagePath
 								)
-									.resize({ width: 600, height: 400 })
+									.resize({ width: 450, height: 408 })
 									.toFile(
 										process.env.BASE_IMAGE_PATH +
 											"/" +
@@ -595,3 +640,17 @@ async function generateNewsID(title) {
 
 	return moment().format("hhmmss") + "-" + b;
 }
+
+exports.banner = async (req, res) => {
+	try {
+		data = [
+			"https://tempdev2.roomie.id/images/banner/1.png",
+			"https://tempdev2.roomie.id/images/banner/2.png",
+			"https://tempdev2.roomie.id/images/banner/3.png",
+		];
+
+		res.status(200).json({ success: true, data: data });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
